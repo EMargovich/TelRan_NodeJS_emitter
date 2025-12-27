@@ -3,7 +3,7 @@ import {createServer, type IncomingMessage} from "node:http";
 import {addUser, deleteUser, getAllUsers, getUserById, updateUser, type User} from "./model/users.js";
 import {emitter} from "./events/emitter.js";
 
-const PORT = 3005;
+let port = 3005;
 
 /*
 GET/ -> Hello
@@ -41,7 +41,7 @@ const myServer = createServer(async (req, res) => {
     const{url, method} = req;
     console.log("Request: ", JSON.stringify(url), method);
 
-    const parsedUrl = new URL(url??"/", "http://localhost:" + PORT);
+    const parsedUrl = new URL(url??"/", "http://localhost:" + port);
     const pathname = parsedUrl.pathname;
     const usersIdParam = parsedUrl.searchParams.get("userId");
 
@@ -114,6 +114,25 @@ const myServer = createServer(async (req, res) => {
     }
 });
 
-myServer.listen(PORT, () => {
-    console.log(`Server started on http://localhost:${PORT}`);
+function startServer(port: number) {
+    console.log(`Trying to start server on port started: ${port}`);
+    myServer.listen(port);
+}
+
+myServer.on('listening', () => {
+    console.log(`Server started on http://localhost:${port}`);
 });
+
+myServer.on('error', (e:any) => {
+    if (e.code === 'EADDRINUSE') {
+        console.error(`Port ${port} is in use. Retrying on ${port + 1}...`);
+        port++;
+        setTimeout(() => {
+            startServer(port);
+        }, 500);
+    } else {
+        console.error('Server error:', e);
+    }
+})
+
+startServer(port);
